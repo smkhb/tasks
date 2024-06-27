@@ -1,0 +1,85 @@
+import fs from "node:fs/promises";
+const databasePath = new URL("../database.json", import.meta.url);
+
+export class Database {
+  #database = {};
+
+  constructor() {
+    fs.readFile(databasePath, "utf8")
+    .then((data) => {
+      this.#database = JSON.parse(data);
+    }).catch(() => {
+      this.#persist();
+    })
+  }
+
+  #persist(){
+    fs.writeFile(databasePath, JSON.stringify(this.#database));
+  }
+
+  select(table, search){
+
+    let data = this.#database[table] ?? "Table not found";
+    if(search){ 
+      data = data.filter(row => {
+        return Object.entries(search).some(([key, value]) => {
+          return row[key].includes(value);
+        })
+      })
+    }
+    return data;
+  }
+
+  insert(table, data){
+    if(Array.isArray(this.#database[table])){
+      this.#database[table].push(data) 
+    } else {
+      this.#database[table] = [data]
+    }
+    this.#persist();
+  }
+
+  update(table, id, { title, description}) {
+    const rowIndex = this.#database[table].findIndex(row => row.id === id)
+
+    if (rowIndex === -1) {
+      return null;
+    } else {
+      this.#database[table][rowIndex] = {...this.#database[table][rowIndex],
+        title,
+        description,
+        updated_at: new Date().toISOString()
+      };
+      this.#persist();
+    }
+  }
+
+  delete(table, id){
+
+    const rowIndex = this.#database[table].findIndex(row => row.id === id)
+    
+    if (rowIndex === -1) {
+      return null;
+    } else {
+      this.#database[table].splice(rowIndex, 1);
+      this.#persist();
+    }
+
+  }
+
+  complete(table, id){
+
+    const rowIndex = this.#database[table].findIndex(row => row.id === id)
+    
+    if (rowIndex === -1) {
+      return null;
+    } else {
+      this.#database[table][rowIndex] = {...this.#database[table][rowIndex],
+        completed_at: new Date().toISOString()
+      };
+      this.#persist();
+    }
+
+  }
+  
+}
